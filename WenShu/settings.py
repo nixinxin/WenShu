@@ -100,7 +100,7 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 
-MYSQL_HOST = '127.0.0.1'
+MYSQL_HOST = '172.28.118.4'
 MYSQL_PORT = 3306  # 端口号必须是int
 MYSQL_DB = 'judgements'
 MYSQL_USER = 'root'
