@@ -106,6 +106,10 @@ MYSQL_DB = 'judgements'
 MYSQL_USER = 'root'
 MYSQL_PASSWD = '123456'
 
+REDIS_HOST = "172.28.118.4"
+REDIS_PORT = "6379"
+REDIS_ENCODING = "utf-8"
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT = os.path.join(BASE_DIR, 'WenShu')
 sys.path.append(BASE_DIR)
