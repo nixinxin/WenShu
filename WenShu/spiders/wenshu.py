@@ -16,6 +16,7 @@ from WenShu.scrapy_redis.spiders import RedisSpider
 
 from WenShu.items import WenshuItem, RelatedItem
 from WenShu.settings import JS_CODE, BASE_DIR
+from utils.crawl_xici_ip import GetIP
 
 
 class WenshuSpider(RedisSpider):
@@ -23,6 +24,7 @@ class WenshuSpider(RedisSpider):
     redis_key = "wenshu:start_urls"
 
     allowed_domains = ['wenshu.court.gov.cn']
+    index = ['http://wenshu.court.gov.cn/index']
     start_urls = ['http://wenshu.court.gov.cn/List/List']
     pages_url = 'http://wenshu.court.gov.cn/Index/GetAllCountRefresh?refresh=Refresh'
     list_content = "http://wenshu.court.gov.cn/List/ListContent"
@@ -34,49 +36,71 @@ class WenshuSpider(RedisSpider):
     get_html_url = "http://wenshu.court.gov.cn/CreateContentJS/CreateContentJS.aspx?DocID={0}"
 
     types = {1: '刑事案件', 2: '民事案件', 3: '行政案件', 4: '赔偿案件', 5: '执行案件'}
-    case_counts = {}
-    header = {"User-Agent": getattr(UserAgent(), 'random')}
+    case_counts = {'刑事案件': 6178447, '民事案件': 27658556, '行政案件': 1411938, '赔偿案件': 36568, '执行案件': 8424200}
+    header = {"User-Agent": getattr(UserAgent(), 'random'),
+              "Accept": "*/*",
+              "Accept-Encoding": "gzip, deflate",
+              "Accept-Language": "zh-CN, zh;q = 0.9",
+              "Connection": "keep-alive",
+              "Content-Type": "application/x-www-form-urlencoded;charset = UTF-8",
+              "Host": "wenshu.court.gov.cn",
+              "Origin": "http://wenshu.court.gov.cn",
+              "Referer": "http://wenshu.court.gov.cn/Index",
+              "X-Requested-With": "XMLHttpRequest",
+              }
     pages = 0
-    custom_settings = {
-        'JOBDIR': 'status/001',
-    }
 
-    def __init__(self, *args, **kwargs):
-        # self.brower = webdriver.Chrome()
-        # self.wait = WebDriverWait(self.brower, 60)
-        # dispatcher.connect(self.spider_closed, signals.spider_closed)
-        super(WenshuSpider, self).__init__()
+    # custom_settings = {
+    #     'JOBDIR': 'status/001',
+    # }
 
     def start_requests(self):
-        url = "http://wenshu.court.gov.cn/Index/GetAllCountRefresh"
-        querystring = {"refresh": "Refresh"}
-        response = requests.request("POST", url, params=querystring, headers=self.header).text
-        result = json.loads(json.loads(response))[1]['CaseTypeCount']
-        for i in result:
-            case = i['name']
-            count = int(i['count'][0]['Count'])
-            self.case_counts[case] = int(count / 20) + 1
-            file_base = os.path.join(BASE_DIR, 'files', case)
-            if not os.path.exists(file_base):
-                os.makedirs(file_base)
-        yield scrapy.Request(url=self.start_urls[0], headers=self.header, callback=self.parse)
+        # url = "http://wenshu.court.gov.cn/Index/GetAllCountRefresh"
+        # querystring = {"refresh": "Refresh"}
+        # response = requests.request("POST", url, params=querystring, headers=self.header).text
+        # result = json.loads(json.loads(response))[1]['CaseTypeCount']
+        # for i in result:
+        #     case = i['name']
+        #     count = int(i['count'][0]['Count'])
+        #     self.case_counts[case] = int(count / 20) + 1
+        #     file_base = os.path.join(BASE_DIR, 'files', case)
+        #     if not os.path.exists(file_base):
+        #         os.makedirs(file_base)
+        yield scrapy.FormRequest(url=self.start_urls[0], headers=self.header, callback=self.getguid_num)
+
+    def getguid_num(self, response):
+        guid = execjs.compile(open(JS_CODE, encoding='utf-8').read()).call('ref', '')
+        payload = {"guid": guid}
+        yield scrapy.FormRequest(url=self.getcode, formdata=payload, headers=self.header, callback=self.get_cookie,
+                                 meta={"guid": guid})
+
+    def get_cookie(self, response):
+        guid = response.meta.get('guid', '')
+        number = response.text
+        # response = requests.request("POST", self.start_urls[0], headers=self.header, proxies=proxies).cookies
+        # cookie = dict(response)['vjkl5']
+        yield scrapy.FormRequest(url=self.start_urls[0], headers=self.header, callback=self.parse, dont_filter=True,
+                                 meta={"guid": guid, 'number': number})
 
     def parse(self, response):
-        for case in self.types.values():
-            guid, number = self.getguid_num()
-            cookies_re = re.compile('vjkl5=(.*?);')
-            cookies = cookies_re.findall(str(response.headers))[0]
-            for page in range(1, self.case_counts[case]):
+        for case, pages in self.case_counts.items():
+            for page in range(1, int(pages / 20) + 1):
+                guid = response.meta.get('guid', '')
+                number = response.meta.get('number', '')
+                cookies_re = re.compile('vjkl5=(.*?);')
+                cookies = cookies_re.findall(str(response.headers))[0]
+                cookies = self.getkey(cookies)
                 content_parse = {
                     "Param": "案件类型:{0}".format(case),
                     "Index": str(page),
                     "Page": "20",
                     "Order": "法院层级",
                     "Direction": "asc",
-                    "vl5x": self.getkey(cookies),
+                    "vl5x": cookies,
                     "number": number,
                     "guid": guid,
                 }
+                self.header['Cookies'] = "vjkl5=" + cookies
                 yield scrapy.FormRequest(url=self.list_content, formdata=content_parse,
                                          headers=self.header, callback=self.detail)
 
@@ -99,7 +123,10 @@ class WenshuSpider(RedisSpider):
                 items['trialyear'] = None
 
             items['case_id'] = info['文书ID']
-            items['trialround'] = info['审判程序']
+            try:
+                items['trialround'] = info['审判程序']
+            except:
+                items['trialround'] = None
             items['zh_id'] = info['案号'] if info['案号'] != "无" else None
             yield items
 
@@ -193,15 +220,17 @@ class WenshuSpider(RedisSpider):
         print(dict(items))
         yield items
 
-    def getguid_num(self):
-        guid = execjs.compile(open(JS_CODE, encoding='utf-8').read()).call('ref', '')
-        payload = {"guid": guid}
-        number = requests.request("POST", self.getcode, data=payload, headers=self.header).text
-        return guid, number
-
     def getkey(self, cookie):
         key = execjs.compile(open("F:\WenShu\WenShu\js\secure.js", encoding='utf-8').read()).call('getKey', cookie)
         return key
+
+    # def get_cookie(self, ip_port):
+    #     proxies = {
+    #         'http': ip_port
+    #     }
+    #     response = requests.request("POST", self.start_urls[0], headers=self.header, proxies=proxies).cookies
+    #     cookie = dict(response)['vjkl5']
+    #     return cookie
 
 # selenium驱动浏览器
 # self.brower.get(self.type_url.format(case))

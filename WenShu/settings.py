@@ -74,7 +74,7 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
     'WenShu.pipelines.MysqlTwistedPipeline': 300,
     # 'WenShu.pipelines.WenshuPipeline': 300,
-    # 'scrapy_redis.pipelines.RedisPipeline': 200,
+    'scrapy_redis.pipelines.RedisPipeline': 200,
 
 }
 
@@ -100,7 +100,7 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 
-MYSQL_HOST = '172.28.118.4'
+MYSQL_HOST = '127.0.0.1'
 MYSQL_PORT = 3306  # 端口号必须是int
 MYSQL_DB = 'judgements'
 MYSQL_USER = 'root'
@@ -126,9 +126,9 @@ DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
 
 
 # Retry many times since proxies often fail
-RETRY_TIMES = 10
+# RETRY_TIMES = 10
 # Retry on most error codes since proxies fail for different reasons
-RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408]
+# RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408]
 
 
 
@@ -137,13 +137,13 @@ RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408]
 # http://username:password@host2:port
 # http://host3:port
 # ...
-PROXY_LIST = '/path/to/proxy/list.txt'
+# PROXY_LIST = '/path/to/proxy/list.txt'
 
 # Proxy mode
 # 0 = Every requests have different proxy
 # 1 = Take only one proxy from the list and assign it to every requests
 # 2 = Put a custom proxy to use in the settings
-PROXY_MODE = 0
+# PROXY_MODE = 0
 
 # If proxy mode is 2 uncomment this sentence :
 #CUSTOM_PROXY = "http://host1:port"

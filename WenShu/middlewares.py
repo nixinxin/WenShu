@@ -95,11 +95,10 @@ class WenshuDownloaderMiddleware(object):
         #     ip_port = "http://{0}".format(result.split("\n")[0])
         #     request.meta['proxy'] = ip_port
         #     print(ip_port, request.body)
-        request.meta['proxy'] = GetIP().get_random_ip()
+        # request.meta['proxy'] = GetIP().get_random_ip()
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
-        print(response.url)
         # Must either;
         # - return a Response object
         # - return a Request object
