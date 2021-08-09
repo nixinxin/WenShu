@@ -21,7 +21,7 @@ pycparser==2.18
 PyDispatcher==2.0.5
 PyExecJS==1.5.1
 pyOpenSSL==17.5.0
-pywin32==223
+pywin32==301
 queuelib==1.5.0
 redis==2.10.6
 requests==2.18.4
